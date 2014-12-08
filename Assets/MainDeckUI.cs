@@ -2,7 +2,11 @@
 using System.Collections;
 
 public class MainDeckUI : MonoBehaviour {
+	
+	void Awake(){
 
+	}
+	
 	// Use this for initialization
 	void Start () {
 	

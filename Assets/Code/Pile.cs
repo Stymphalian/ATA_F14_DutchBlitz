@@ -24,6 +24,10 @@ public class Pile{
 		}
 		return false;
 	}
+	public bool IsNext(Card c){
+		if( topCard == null){return false;}
+		return (c.number == topCard.number +1 && c.cardType == topCard.cardType);
+	}
 
 	public string AsString(){
 		string s= "[Pile: " + pileId + "," +topCard.AsString() + "]";

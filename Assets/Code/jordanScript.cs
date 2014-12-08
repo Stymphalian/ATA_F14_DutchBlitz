@@ -14,8 +14,10 @@ public class jordanScript : MonoBehaviour {
 
 	public void button1(){
 //		Notification.instance.Message(GameStateManager.instance.AsString(),-1);
-		string s= GameStateManager.instance.AsString();
-		GameStateManager.instance.CompareStateToServer(PlayerModel.GetPlayerId(),s);
+//		string s= GameStateManager.instance.AsString();
+//		GameStateManager.instance.CompareStateToServer(PlayerModel.GetPlayerId(),s);
+		GameStateManager.instance.StartRound(0);
+		this.gameObject.SetActive(false);
 	}
 	
 	public void button2(){

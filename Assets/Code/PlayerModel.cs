@@ -16,6 +16,7 @@ using System.Collections.Generic;
 public class PlayerModel {
 	public const int FIELD_DECK_LEN = 10;
 	public const int FIELD_DECK_OUTSIDE_LEN = 3;
+	public const int MAIN_TO_DISCARD_SIZE = 3;
 	
 	// this data is passed around to clients.
 	public int playerId = -1;
@@ -31,8 +32,8 @@ public class PlayerModel {
 	protected Card[] defaultCards;
 	public List<Card> mainDeck = new List<Card>(); // 10 cards? try to get rid of all of these cards
 
-	// can't trust these values on the client..
-	public List<Card> discardPile = new List<Card>(); // pile outside of the hand deck
+	// only reliable if networkView.isMine == true
+	public List<Card> discardDeck = new List<Card>(); // pile outside of the hand deck
 	public List<Card> handDeck = new List<Card>(); // hand deck is the reserve deck which you can play from
 	
 	public PlayerModel(){
@@ -48,23 +49,46 @@ public class PlayerModel {
 		}
 	}
 	
+	public void MoveToDiscard(int num){
+		for( int i = 0; i < num; ++i){
+			if( handDeck.Count == 0){return;}
+
+			// pop of the first element in the deck
+			Card c = handDeck[0];
+			handDeck.RemoveAt(0);
+
+			// add to the front..
+			discardDeck.Insert(0,c);
+		}
+	}
+	
+	public void ReshuffleDiscardIntoHand(){
+		int count = discardDeck.Count;
+		for( int i = count -1; i >= 0; --i){
+			handDeck.Add(discardDeck[i]);
+		}
+		discardDeck.Clear();
+	}
+
 	public void ResetForRound(){
 		// reset the player model for a new round...
 		mainDeck.Clear();
-		discardPile.Clear();
+		discardDeck.Clear();
 		handDeck.Clear();
 		fieldScoreCount = 0;
 		// mainDeckCount is reset at the end...
 		
 		// shuffle the defaultCards
 		int defaultCardsLen = defaultCards.Length;
-		for( int i = 0; i < defaultCardsLen; ++i){
-			int rand = UnityEngine.Random.Range (i,defaultCardsLen);
+		if( false){
+			for( int i = 0; i < defaultCardsLen; ++i){
+				int rand = UnityEngine.Random.Range (i,defaultCardsLen);
 
-			// swap the place of the cards.
-			Card temp = defaultCards[i];
-			defaultCards[i] = defaultCards[rand];
-			defaultCards[rand] = temp;
+				// swap the place of the cards.
+				Card temp = defaultCards[i];
+				defaultCards[i] = defaultCards[rand];
+				defaultCards[rand] = temp;
+			}
 		}
 		
 		// place the cards into the field deck
@@ -88,8 +112,12 @@ public class PlayerModel {
 	}
 
 
+	private static int _playerId  = -1;
 	public static int GetPlayerId(){
-		return PlayerPrefs.GetInt ("PlayerModel_playerId",-1);
+		if( _playerId == -1){
+			_playerId = PlayerPrefs.GetInt ("PlayerModel_playerId",-1);
+		}
+		return _playerId;
 	}
 
 	public void LoadPlayerFromPrefs(){

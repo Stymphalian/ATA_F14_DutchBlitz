@@ -21,19 +21,21 @@ public class GameStateManager : MonoBehaviour {
 			p.LoadPlayerFromPrefs();
 			joinPlayer(p.playerId,p.playerName);
 		}
+	}
 
-		if( Network.isClient){
-			// debug stuff to make sure the client state is always in sync with the server..
-			OnCreatePile.Sub(this.gameObject,compareState);
-			OnRemovePile.Sub(this.gameObject,compareState);
-			OnMainToPile.Sub(this.gameObject,compareState);
-			OnDiscardToPile.Sub(this.gameObject,compareState);
+
+
+	public class GameStateEvent{
+		public GameStateEvent(int id,System.Object d){
+			_playerId = id;
+			_data = d;
 		}
+
+		protected int _playerId;
+		protected System.Object _data;
+		public int playerId {get{return _playerId;}}
+		public System.Object data {get{return _data;}}
 	}
-	private void compareState(UnityEngine.GameObject self,System.Object data){
-		GameStateManager.instance.CompareStateToServer(PlayerModel.GetPlayerId(),AsString());
-	}
-	
 	public EventSubscriber OnStartGame = new EventSubscriber();
 	public EventSubscriber OnEndGame = new EventSubscriber();
 	public EventSubscriber OnStartRound = new EventSubscriber();
@@ -42,6 +44,7 @@ public class GameStateManager : MonoBehaviour {
 	public EventSubscriber OnRemovePile = new EventSubscriber();
 	public EventSubscriber OnMainToPile = new EventSubscriber();
 	public EventSubscriber OnDiscardToPile = new EventSubscriber();
+	private bool roundLock= true;
 
 	[RPC]
 	public void StartGame(){
@@ -68,11 +71,14 @@ public class GameStateManager : MonoBehaviour {
 		}
 
 		roundCount = round;
+		roundLock = false;
 		OnStartRound.Publish(null);
 	}
 
 	[RPC]
 	public void EndRound(){
+		roundLock = true;
+
 		// calculate the final scores for all the players
 		foreach(KeyValuePair<int,PlayerModel> entry in playerModels){
 			int pointsForRound = entry.Value.PointsForRound();
@@ -168,41 +174,62 @@ public class GameStateManager : MonoBehaviour {
 	private int nextPileID {
 		get{return _nextPileID++;}
 	}
-	
-	protected void createPile(int newPileId, int cardNumber, int cardType){
+
+
+	// fromMainDeck -- this will be -1 if it the pile was being created from a card from the discard pile
+	// else it will be the index of the card the main deck which is used to create the pile.
+	[RPC]
+	protected void createPile(int playerId,int newPileId, int cardNumber, int cardType, int fromMainDeck){
 		if( Network.isServer){
 			// validation.
 			if( cardNumber != Card.MIN_NUM ){return;}
 			if( cardType < 0 || cardType >= System.Enum.GetValues(typeof(Card.TypeEnum)).Length ){return;}
 
-			// NOTE: newPileId will be ... garbage if it is called from the server.
+			// NOTE: newPileId will be garbage when first called from the server.
 			newPileId = nextPileID;
-			networkView.RPC ("createPile",RPCMode.Others,newPileId,cardNumber, cardType);
+			networkView.RPC ("createPile",RPCMode.Others,playerId,newPileId,cardNumber,cardType,fromMainDeck);
 		}
 
 		// create a new pile object and set the top card.
 		Pile p = new Pile(newPileId);
 		piles[newPileId] = p;
-		p.topCard = new Card(cardNumber,(Card.TypeEnum)cardType);
+
+		if( Network.isServer){
+			if( fromMainDeck < 0){
+				// came from the discard pile
+				discardToPile(playerId, cardNumber, cardType,newPileId);
+			}else{
+				// came from the main deck
+				mainToPile(playerId,fromMainDeck,newPileId);
+			}
+		}
 
 		// tell everyone who needs to know (i.e display layer)
 		OnCreatePile.Publish(newPileId);
-	}
 
-	protected void removePile(int pileId){
-		if(Network.isServer){
-			// validate removal?
-			if( piles.ContainsKey(pileId) == false){return;}
-
-			networkView.RPC("removePile",RPCMode.Others,pileId);
+		if(Network.isClient){
+			compareState();
 		}
+	}
+	
+	protected void removePile(int pileId){
+//		if(Network.isServer){
+//			// validate removal?
+//			if( piles.ContainsKey(pileId) == false){return;}
+//			networkView.RPC("removePile",RPCMode.Others,pileId);
+//		}
 
 		// remove the entry from the dict and then tell people..
-		piles.Remove (pileId);
+		piles.Remove(pileId);
 		OnRemovePile.Publish(pileId);
+
+		if(Network.isClient){
+			compareState();
+		}
    	}
 		   
-   protected void mainToPile(int playerId,int cardIndex,int pileId){
+	[RPC]
+   	protected void mainToPile(int playerId,int cardIndex,int pileId){
 		PlayerModel p;
 		Card c;
 		if( Network.isServer){
@@ -229,14 +256,19 @@ public class GameStateManager : MonoBehaviour {
 		piles[pileId].topCard = c;
 		p.mainDeck.RemoveAt(cardIndex);
 		
-		OnMainToPile.Publish(pileId);
+		OnMainToPile.Publish(new GameStateEvent(playerId,pileId));
 
 		// remove the pile if necessary
-		if( Network.isServer && piles[pileId].IsComplete() ){
+		if(piles[pileId].IsComplete() ){
 			removePile(pileId);
 		}
+
+		if(Network.isClient){
+			compareState();
+		}
 	}
-	
+
+	[RPC]
 	protected void discardToPile(int playerId,int cardNumber,int cardType,int pileId){
 		PlayerModel p;
 		Card c;
@@ -251,51 +283,65 @@ public class GameStateManager : MonoBehaviour {
 		c = new Card(cardNumber,(Card.TypeEnum)cardType);
 		piles[pileId].topCard = c;
 
-		OnDiscardToPile.Publish(pileId);
+		OnDiscardToPile.Publish(new GameStateEvent(playerId,pileId));
 
 		// remove the pile if necessary
-		if( Network.isServer && piles[pileId].IsComplete() ){
+		if(piles[pileId].IsComplete() ){
 			removePile(pileId);
+		}
+
+		if(Network.isClient){
+			compareState();
 		}
 	}
 
 	// check to see if this is valid move to make.
 	protected bool isValidCardPlay(int playerId, int cardNumber, int cardType, int pileId){
-		// check for valid pileId
-		if( piles.ContainsKey(pileId) == false){return false;}
-		
 		// check for valid player id
 		if( playerModels.ContainsKey(playerId) == false){return false;}
 //		PlayerModel p = playerModels[playerId];
 				
+
+		// check for valid pileId
+		if( piles.ContainsKey(pileId) == false){return false;}
+		if( piles[pileId].IsComplete () ){return false;}
 		// check for ascendeing and same colour
-		if( cardNumber != piles[pileId].topCard.number +1){return false;}
-		if( cardType != (int)piles[pileId].topCard.cardType){return false;}
+		if( piles[pileId].topCard != null){
+			if( cardNumber != piles[pileId].topCard.number +1){return false;}
+			if( cardType != (int)piles[pileId].topCard.cardType){return false;}
+		}
+
 		return true;
 	}
 
 	//-----------------------------
 	// client actions
 	//-----------------------------
+	[RPC]
 	public void DiscardToPile(int playerId,int cardNumber,int cardType, int pileId){
+		if( roundLock == true){return;}
 		if(Network.isClient){
 			networkView.RPC ("DiscardToPile",RPCMode.Server,playerId,cardNumber,cardType,pileId);
 		}else if(Network.isServer){
 			discardToPile(playerId,cardNumber,cardType,pileId);
 		}
 	}
+	[RPC]
 	public void MainToPile(int playerId,int cardIndex, int pileId){
+		if( roundLock == true){return;}
 		if(Network.isClient){
 			networkView.RPC ("MainToPile",RPCMode.Server,playerId,cardIndex,pileId);
 		}else if(Network.isServer){
 			mainToPile(playerId,cardIndex,pileId);
 		}
 	}
-	public void CreatePile(int playerId, int cardNumber, int cardType){
+	[RPC]
+	public void CreatePile(int playerId, int cardNumber,int cardType,int fromMainDeck){
+		if( roundLock == true){return;}
 		if(Network.isClient){
-			networkView.RPC ("CreatePile",RPCMode.Server,playerId,cardNumber,cardType);
+			networkView.RPC ("CreatePile",RPCMode.Server,playerId,cardNumber,cardType,fromMainDeck);
 		}else if(Network.isServer){
-			createPile(playerId,cardNumber,cardType);
+			createPile(playerId,-1,cardNumber,cardType,fromMainDeck);
 		}
 	}
 
@@ -333,6 +379,10 @@ public class GameStateManager : MonoBehaviour {
 		}
 		return s;
 	}
+
+	private void compareState(){
+		CompareStateToServer(PlayerModel.GetPlayerId(),AsString());
+	}
 	[RPC]
 	public void CompareStateToServer(int player_id,string client_state){
 		if(Network.isClient){
@@ -342,20 +392,18 @@ public class GameStateManager : MonoBehaviour {
 		}else if( Network.isServer){
 			// result is printed out on the server
 			string server_state = AsString();
-			string rs;
-			if( server_state == client_state){
-				rs = "good";
-			}else{
-				rs = "bad";
-			}
+			string rs = ( server_state == client_state) ? "good" : "bad";
 			Debug.Log ("Comparing Player[" + player_id + "] state with Server state: " + rs);
 			if( rs == "bad"){
-				Debug.Log ("Server State:");
-				Debug.Log (server_state + "\n");
-				Debug.Log ("Client State:");
-				Debug.Log (client_state +"\n");
+				Debug.Log ("ServerState : \n" + server_state + "\n");
+				Debug.Log ("Client State: \n" + client_state +"\n");
 			}
 
 		}
+	}
+
+
+	public PlayerModel GetPlayerModel(){
+		return playerModels[PlayerModel.GetPlayerId()];
 	}
 }
