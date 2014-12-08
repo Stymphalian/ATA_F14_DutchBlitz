@@ -596,7 +596,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: .198313177, g: .963235319, b: .583411872, a: 1}
+  m_Color: {r: 1, g: .175659224, b: .0588235259, a: 1}
   m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   m_Type: 1
   m_PreserveAspect: 0
@@ -1507,7 +1507,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Button
+  m_Text: 
 --- !u!222 &22200000
 CanvasRenderer:
   m_ObjectHideFlags: 1
@@ -1768,7 +1768,7 @@ RectTransform:
   - {fileID: 22400000}
   - {fileID: 22400054}
   m_Father: {fileID: 22400024}
-  m_RootOrder: 1
+  m_RootOrder: 0
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: .423888087, y: 1}
   m_AnchoredPosition: {x: 7.62939453e-06, y: .0100030899}
@@ -1874,8 +1874,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
-  - {fileID: 22400028}
   - {fileID: 22400012}
+  - {fileID: 22400028}
   m_Father: {fileID: 22400036}
   m_RootOrder: 0
   m_AnchorMin: {x: .0482096896, y: .151226163}
@@ -1909,11 +1909,11 @@ RectTransform:
   m_GameObject: {fileID: 100028}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: .99999994, y: .99999994, z: .99999994}
   m_Children:
   - {fileID: 22400068}
   m_Father: {fileID: 22400024}
-  m_RootOrder: 0
+  m_RootOrder: 1
   m_AnchorMin: {x: 0, y: .0260000005}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
@@ -2205,8 +2205,8 @@ RectTransform:
   m_RootOrder: 0
   m_AnchorMin: {x: .0490000024, y: .5}
   m_AnchorMax: {x: .954734445, y: .95565927}
-  m_AnchoredPosition: {x: -7, y: 7.5}
-  m_SizeDelta: {x: 1, y: -22}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: .5, y: .5}
 --- !u!224 &22400062
 RectTransform:

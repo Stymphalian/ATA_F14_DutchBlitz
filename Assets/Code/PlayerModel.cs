@@ -94,7 +94,7 @@ public class PlayerModel {
 		// place the cards into the field deck
 		int defaultCardsIndex = 0;
 		for (int i = 0; i < FIELD_DECK_LEN + FIELD_DECK_OUTSIDE_LEN; ++i){
-			mainDeck.Add(defaultCards[i]);
+			mainDeck.Add(defaultCards[defaultCardsIndex]);
 			defaultCardsIndex++;
 		}
 		

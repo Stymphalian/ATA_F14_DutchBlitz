@@ -240,7 +240,7 @@ public class GameStateManager : MonoBehaviour {
 
 			// check for valid cardIndex range
 			if( cardIndex < 0 || cardIndex >PlayerModel.FIELD_DECK_OUTSIDE_LEN + 1){return;}
-			if( cardIndex >= p.handDeck.Count){return;}
+			if( cardIndex >= p.mainDeck.Count){return;}
 			c = p.mainDeck[cardIndex];
 
 			if( isValidCardPlay(playerId,c.number,(int)c.cardType,pileId) == false){return;}
