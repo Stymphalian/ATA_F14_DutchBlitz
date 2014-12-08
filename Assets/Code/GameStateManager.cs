@@ -197,7 +197,7 @@ public class GameStateManager : MonoBehaviour {
 		if( Network.isServer){
 			if( fromMainDeck < 0){
 				// came from the discard pile
-				discardToPile(playerId, cardNumber, cardType,newPileId);
+				discardToPile(playerId, cardNumber,cardType,newPileId);
 			}else{
 				// came from the main deck
 				mainToPile(playerId,fromMainDeck,newPileId);

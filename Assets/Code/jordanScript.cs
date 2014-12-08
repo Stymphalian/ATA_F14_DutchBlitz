@@ -16,10 +16,12 @@ public class jordanScript : MonoBehaviour {
 //		Notification.instance.Message(GameStateManager.instance.AsString(),-1);
 //		string s= GameStateManager.instance.AsString();
 //		GameStateManager.instance.CompareStateToServer(PlayerModel.GetPlayerId(),s);
-		GameStateManager.instance.StartRound(0);
+		if( Network.isServer){
+			GameStateManager.instance.StartRound(0);
+		}
 		this.gameObject.SetActive(false);
 	}
-	
+
 	public void button2(){
 		if(Network.isServer){
 			GameStateManager.instance.EndRound();
